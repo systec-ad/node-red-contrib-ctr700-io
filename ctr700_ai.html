@@ -1,0 +1,410 @@
+<!--
+*****************************************************************************
+
+  (c) SYSTEC electronic GmbH, D-08468 Heinsdorfergrund, Am Windrad 2
+      www.systec-electronic.com
+
+  Project:      Node-RED Node 'ctr700 ai'
+  Description:  Node configuration
+
+  -------------------------------------------------------------------------
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+
+  -------------------------------------------------------------------------
+
+  Revision History:
+
+  2018/02/25 -rs:   V1.00 Initial version
+
+*****************************************************************************
+-->
+
+
+
+<!-- ============================================================ -->
+<!--            N O D E   H E L P   T E X T                       -->
+<!-- ============================================================ -->
+
+<script type="text/x-red" data-help-name="ctr700_ai">
+
+    <p>sysWORXX CTR-700 analog input node. Generates a <code>msg.payload</code>
+    with the ADC process value of the associated <b>input channel</b>. The input
+    channel can operate either in voltage or current mode.
+    The type of the payload value can be configured as number or string.</p>
+    <p>The <b>Channel</b> specifies the Analog Input of the CTR-700 (e.g. <i>AI2</i>).</p>
+    <p><b>Mode</b> selects the operating mode either in voltage mode (0..10V) or current mode (0..20mA).
+    In the standard modes (`0..10V` resp. `0..20mA`) the upper and lower values are preset to generate
+    output values with the native voltage value (0..10V) resp. native current value (0..20mA). In the
+    user defined modes the upper and lower value can be defined by the user. This allows for generating
+    specific process values.<br>
+    <i><u>Example</u> for user defined mode:</i><br>
+    An 4..20mA Temperature Transmitter with a temperature range of -50&deg;C..+150&deg;C is used. The AI in
+    current mode measures from 0..26.84mA (see CTR-700 Manual). By configuring the lower value to <I>-100</I>
+    and the upper value to <I>235</I> the output value is directly the messured temperatur value in &deg;C.</p>
+    <p>The <b>Sample Rate</b> specifies the measurement interval.</p>
+    <p><b>Delta</b> specifies how many digits the process value must change before it is retransmitted the next time.</p>
+    <p><b>ADC(32768)</b> is the <code>msg.payload</code> for upper process value (on ADC output 32768).</p>
+    <p><b>ADC(0)</b> is the <code>msg.payload</code> for lower process value (on ADC output 0).</p>
+    <p><b>Format</b> specifies how many decimal places the <code>msg.payload</code> output process value contains.
+    Selecting <i>`All`</i> will suppress any format conversion.</p>
+    <p><i><u>Hint:</u></i><br>
+    If <b>ADC(32768)</b> is set to 32768 and <b>ADC(0)</b> is set to 0, then the node <code>msg.payload</code>
+    output value is directly the raw ADC value.</p>
+    <h3>Output</h3>
+    <dl class="message-properties">
+        <dt>topic <span class="property-type">string</span></dt>
+        <dd>The default topic is <i>`/ai/{channel_number}`</i>, e.g. <i>`/ai/2`</i>. However, this can be
+        overwritten by option <i>`use alternative topic`</i></dd>
+        <dt>payload <span class="property-type">number or string</span></dt>
+        <dd>The payload is the calculated process value based on configured lower <i>(`ADC(0)`)</i> and upper <i>(`ADC(32768)`)</i> values.</dd>
+    </dl>
+
+</script>
+
+
+
+<!-- ============================================================ -->
+<!--            N O D E   C O N F I G   D I A L O G               -->
+<!-- ============================================================ -->
+
+<script type="text/x-red" data-template-name="ctr700_ai">
+
+    <div class="form-row"  id="id-node-div-row-input-channel">
+        <label for="node-output-channel"><i class="fa fa-list"></i> Channel</label>
+        <select type="text" id="node-input-channel" size="1" onchange="Fun_Ctr700_AI_FollowUpTopicState()">
+            <option value="IN_AI0">AI0</option>
+            <option value="IN_AI1">AI1</option>
+            <option value="IN_AI2">AI2</option>
+            <option value="IN_AI3">AI3</option>
+        </select>
+    </div>
+
+    <div class="form-row" id="id-node-div-row-input-mode">
+        <label for="node-input-mode"><i class="fa fa-cog"></i> Mode</label>
+        <select type="text" id="node-input-mode" size="1" onchange="Fun_Ctr700_AI_FollowUpModeState()">
+            <option value="MODE_VOLTAGE">Voltage (0..10V)</option>
+            <option value="MODE_CURRENT">Current (0..20mA)</option>
+            <option value="MODE_VOLTAGE_USER">Voltage (user defined)</option>
+            <option value="MODE_CURRENT_USER">Current (user defined)</option>
+        </select>
+    </div>
+
+    <div class="form-row" id="id-node-div-row-input-samplerate">
+        <label for="node-input-samplerate"><i class="fa fa-refresh"></i> Sample Rate</label>
+        <input type="text" id="node-input-samplerate" style="text-align:end; width:70px">
+        <select id="node-input-sampleunit" style="width:145px">
+            <option value="SAMPLE_UNIT_MS">Milliseconds</option>
+            <option value="SAMPLE_UNIT_S">Seconds</option>
+        </select>
+    </div>
+
+    <div class="form-row">
+        <label for="node-input-delta"><i class="fa fa-retweet"></i> Delta</label>
+        <input type="text" id="node-input-delta" style="text-align:end; width:70px">
+        <label for="node-input-delta" style="width:250px">&nbsp;&nbsp;Digits (0.355mV / 0.819uA)</label>
+    </div>
+
+    <hr size=1>
+
+    <div class="form-row">
+        <label for="node-input-optunit1000"><i class="fa fa-expand"></i></label>
+        <input type="checkbox" id="node-input-optunit1000" style="width: auto; vertical-align: top;" onclick="Fun_Ctr700_AI_FollowUpModeState()">
+        <label style="width: 250px;"> x1000 (V -> mV / mA -> uA)</label>
+    </div>
+
+    <div class="form-row">
+        <label for="node-input-uppervaldata"><i class="fa fa-thermometer-full"></i> ADC(32768)</label>
+        <input type="text" id="node-input-uppervaldata" style="width: 70%">
+        <input type="hidden" id="node-input-uppervaltype">
+    </div>
+
+    <div class="form-row">
+        <label for="node-input-lowervaldata"><i class="fa fa-thermometer-empty"></i> ADC(0)</label>
+        <input type="text" id="node-input-lowervaldata" style="width: 70%">
+        <input type="hidden" id="node-input-lowervaltype">
+    </div>
+
+    <div class="form-row">
+        <label for="node-input-decplaces"><i class="fa fa-eye"></i> Format</label>
+        <select type="text" id="node-input-decplaces" size="1" style="direction:rtl; text-align:end; width:70px">
+            <option value="DECPLCE_0">0</option>
+            <option value="DECPLCE_1">1</option>
+            <option value="DECPLCE_2">2</option>
+            <option value="DECPLCE_3">3</option>
+            <option value="DECPLCE_ALL">All</option>
+        </select>
+        <label for="node-input-decplaces" style="width:250px">&nbsp;&nbsp;Decimal Place(s)</label>
+    </div>
+
+    <div class="form-row">
+        <label for="node-input-optalttopic"><i class="fa fa-envelope-o"></i></label>
+        <input type="checkbox" id="node-input-optalttopic" style="width: auto; vertical-align: top;" onclick="Fun_Ctr700_AI_FollowUpTopicState()">
+        <label style="width: 150px;"> Use alternative topic</label>
+    </div>
+
+    <div class="form-row">
+        <label for="node-input-alttopic"></label>
+        <input type="text" id="node-input-alttopic" disabled="disabled">
+    </div>
+
+    <div class="form-tips" id="id-node-div-row-form-tip">
+        <b>Note:</b> Default topic is <i>`/ai/{channel_number}`</i> (e.g. <i>`/ai/2`</i>).
+    </div>
+
+    <hr size=1>
+
+    <div class="form-row">
+        <label for="node-input-name"><i class="fa fa-tag"></i> Name</label>
+        <input type="text" id="node-input-name" placeholder="Name">
+    </div>
+
+</script>
+
+
+<script language="javascript">
+
+    function Fun_Ctr700_AI_FollowUpTopicState()
+    {
+        // adopt enable/disable state for edit box "node-input-alttopic" depending on check state of "node-input-optalttopic"
+        // (this function is called during runtime in response to a check state change of the checkbox;
+        // startup initialization is done by event handler "oneditprepare" below)
+        var fCheckedState;
+        var strChannel;
+
+        fCheckedState = document.getElementById("node-input-optalttopic").checked;
+        document.getElementById("node-input-alttopic").disabled = !fCheckedState;
+
+        if ( !fCheckedState )
+        {
+            strChannel = document.getElementById("node-input-channel").value;
+            if ((strChannel != null) && (strChannel.length > 0))
+            {
+                strChannel = strChannel.substr(5);              // "IN_AI0" -> "0"
+                strChannel = "/ai/" + strChannel;
+                document.getElementById("node-input-alttopic").value = strChannel.toLowerCase();
+            }
+        }
+    }
+
+
+    function Fun_Ctr700_AI_FollowUpModeState()
+    {
+        // adopt enable/disable state for edit box "node-input-optunit1000" as well as upper limit value
+        // ("node-input-uppervaldata") and lower limit value ("node-input-lowervaldata") depending on
+        // input mode ("node-input-mode")
+        // (this function is called during runtime in response to a check state change of the checkbox;
+        // startup initialization is done by event handler "oneditprepare" below)
+        var strMode;
+        var nProcVal;
+        var strProcVal;
+        var fProcValEnable;
+        var fOptUnit1000;
+        var fOptUnit1000Enable;
+
+        strProcVal = "";
+        fProcValEnable = true;
+
+        fOptUnit1000 = document.getElementById("node-input-optunit1000").checked;
+
+        strMode = document.getElementById("node-input-mode").value;
+        switch (strMode)
+        {
+            case "MODE_VOLTAGE":
+            {
+                nProcVal = 32768 * 0.355;               // 0.355 V per ADC digit
+                nProcVal = nProcVal.toFixed(0);
+                if ( !fOptUnit1000 )
+                {
+                    nProcVal /= 1000;
+                }
+                strProcVal = nProcVal.toString();
+                fProcValEnable = false;
+                fOptUnit1000Enable = true;
+                break;
+            }
+
+            case "MODE_CURRENT":
+            {
+                nProcVal = 32768 * 0.819;               // 0.819 uA per ADC digit
+                nProcVal = nProcVal.toFixed(0);
+                if ( !fOptUnit1000 )
+                {
+                    nProcVal /= 1000;
+                }
+                strProcVal = nProcVal.toString();
+                fProcValEnable = false;
+                fOptUnit1000Enable = true;
+                break;
+            }
+
+            case "MODE_VOLTAGE_USER":
+            case "MODE_CURRENT_USER":
+            {
+                fProcValEnable = true;
+                fOptUnit1000Enable = false;
+                break;
+            }
+        }
+
+        document.getElementById("node-input-optunit1000").disabled = !fOptUnit1000Enable;
+        if ( !fOptUnit1000Enable )
+        {
+            document.getElementById("node-input-optunit1000").checked = false;
+        }
+
+        document.getElementById("node-input-uppervaldata").disabled = !fProcValEnable;
+        document.getElementById("node-input-lowervaldata").disabled = !fProcValEnable;
+
+        if ( !fProcValEnable )
+        {
+            document.getElementById("node-input-uppervaldata").value = strProcVal;
+            document.getElementById("node-input-lowervaldata").value = 0;
+        }
+    }
+
+ </script>
+
+
+
+<!-- ============================================================ -->
+<!--            N O D E   P R O P E R T I E S   S T R U C T       -->
+<!-- ============================================================ -->
+
+<script type="text/javascript">
+
+    RED.nodes.registerType('ctr700_ai',{
+        category: 'sysworxx-function',
+        color:"DeepSkyBlue",
+        defaults: {
+            name:         {value:""},
+            channel:      {value:"", required:true},
+            mode:         {value:"MODE_VOLTAGE"},
+            samplerate:   {value:"250"},
+            sampleunit:   {value:"SAMPLE_UNIT_MS"},
+            delta:        {value:"3"},
+            optunit1000:  {value:false},
+            uppervaltype: {value:"num"},
+            uppervaldata: {value:"0"},
+            lowervaltype: {value:"num"},
+            lowervaldata: {value:"0"},
+            decplaces:    {value:"DECPLCE_1"},
+            optalttopic:  {value:false},
+            alttopic:     {value:""}
+        },
+        inputs:0,
+        outputs:1,
+        icon: "analog.png",
+        label: function() {
+            return this.name||"ctr700_ai";
+        },
+        labelStyle: function() {
+            return this.name?"node_label_italic":"";
+        },
+
+        oneditprepare: function() {
+            // This function is called during startup (dialog creation time) and handles initialization of gui elements
+            // at dialog creation time (after configuration values are restored by Node-RED runtime environment)
+            // console.log("oneditprepare");
+
+            // set startup initialization enable/disable state for edit box "node-input-alttopic" depending on
+            // check state of "node-input-optalttopic"
+            Fun_Ctr700_AI_FollowUpTopicState();
+
+            // TypedInput widget handler for edit box "node-input-uppervaltype" / "node-input-uppervaldata"
+            $('#node-input-uppervaldata').typedInput({
+                default: "num",
+                typeField: $("#node-input-uppervaltype"),
+                types: [
+                    {
+                        value:"num",
+                        label:"number",
+                        icon:"red/images/typedInput/09.png",
+                        validate:/^[+-]?[0-9]*\.?[0-9]*([eE][-+]?[0-9]+)?$/
+                    },
+                    {
+                        value:"str",
+                        label:"string",
+                        icon:"red/images/typedInput/az.png",
+                        validate:/^[+-]?[0-9]*\.?[0-9]*([eE][-+]?[0-9]+)?$/
+                    }
+                ]
+            });
+
+            // TypedInput widget handler for edit box "node-input-lowervaltype" / "node-input-lowervaldata"
+            $('#node-input-lowervaldata').typedInput({
+                default: "num",
+                typeField: $("#node-input-lowervaltype"),
+                types: [
+                    {
+                        value:"num",
+                        label:"number",
+                        icon:"red/images/typedInput/09.png",
+                        validate:/^[+-]?[0-9]*\.?[0-9]*([eE][-+]?[0-9]+)?$/
+                    },
+                    {
+                        value:"str",
+                        label:"string",
+                        icon:"red/images/typedInput/az.png",
+                        validate:/^[+-]?[0-9]*\.?[0-9]*([eE][-+]?[0-9]+)?$/
+                    }
+                ]
+            });
+
+        },
+
+        oneditsave: function() {
+            var strDelta;
+            var strValData;
+            var fCheckedState;
+            var strAltTopic;
+
+            strDelta = document.getElementById("node-input-delta").value;
+            if ( isNaN(strDelta) )
+            {
+                RED.notify(RED._("notification.warning", {message:"Delta value is not a valid number!"}),"error");
+            }
+
+            strValData = document.getElementById("node-input-uppervaldata").value;
+            if ( isNaN(strValData) )
+            {
+                RED.notify(RED._("notification.warning", {message:"Upper limit value is not a valid number!"}),"error");
+            }
+
+            strValData = document.getElementById("node-input-lowervaldata").value;
+            if ( isNaN(strValData) )
+            {
+                RED.notify(RED._("notification.warning", {message:"Lower limit value is not a valid number!"}),"error");
+            }
+
+            fCheckedState = document.getElementById("node-input-optalttopic").checked;
+            if ( fCheckedState )
+            {
+                strAltTopic = document.getElementById("node-input-alttopic").value;
+                // console.log("oneditsave -> strAltTopic=" + strAltTopic);
+                if (strAltTopic.length == 0)
+                {
+                    RED.notify(RED._("notification.warning", {message:"Alternative Topic is selected but not specified."}),"warning");
+                }
+            }
+            return;
+        }
+
+    });
+
+</script>
+
+
+
+
+

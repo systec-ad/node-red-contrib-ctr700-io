@@ -1,0 +1,275 @@
+<!--
+*****************************************************************************
+
+  (c) SYSTEC electronic GmbH, D-08468 Heinsdorfergrund, Am Windrad 2
+      www.systec-electronic.com
+
+  Project:      Node-RED Node 'ctr700 led'
+  Description:  Node configuration
+
+  -------------------------------------------------------------------------
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+
+  -------------------------------------------------------------------------
+
+  Revision History:
+
+  2018/02/25 -rs:   V1.00 Initial version
+
+*****************************************************************************
+-->
+
+
+
+<!-- ============================================================ -->
+<!--            N O D E   H E L P   T E X T                       -->
+<!-- ============================================================ -->
+
+<script type="text/x-red" data-help-name="ctr700_led">
+
+    <p>sysWORXX CTR-700 LED node. Expects a <code>msg.payload</code>
+    with values defined by user and sets the selected LED to on or off
+    depending on the value passed in. The type of the payload value can be
+    configured as boolean, number or string.</p>
+    <p>The initial value of the LED at start-up resp. deploy time can be selected as
+    <i>`Active`</i> or <i>`Inactive`</i>.</p>
+    <p><b>LED</b> specifies either the Run or the Error LED of the CTR-700.</p>
+    <p>The <b>Init State</b> specifies the initial LED state at start-up resp. deploy time (active, inactive),
+    this is valid until the node rceives its first <code>msg</code> message.</p>
+    <p><b>Active</b> specifies the <code>msg.payload</code> which triggers the setting of the LED to active (On).</p>
+    <p><b>Inactive</b> specifies the <code>msg.payload</code> which triggers the setting of the LED to inactive (Off).</p>
+    <p><i><u>Examples</u> for <b>Active</b> and <b>Inactive</b>:</i><br>
+    [boolean] true<br>
+    [number] 0<br>
+    [number] -200<br>
+    [string] 1<br>
+    [string] open<br></p>
+    <h3>Input</h3>
+    <dl class="message-properties">
+        <dt>topic <span class="property-type">string</span></dt>
+        <dd>The default topic is <i>`/led_run`</i> resp. <i>`/led_err`</i>.
+        However, this can be overwritten by option <i>`use alternative topic`</i>.<br>
+        With the wildcard topic <i>`#`</i> all messages are accepted.</dd>
+        <dt>payload <span class="property-type">boolean, number or string</span></dt>
+        <dd>The payload must be matching to the user configured <i>`Active`</i> resp. <i>`Inactive`</i> values.</dd>
+    </dl>
+
+</script>
+
+
+
+<!-- ============================================================ -->
+<!--            N O D E   C O N F I G   D I A L O G               -->
+<!-- ============================================================ -->
+
+<script type="text/x-red" data-template-name="ctr700_led">
+
+    <div class="form-row"  id="id-node-div-row-output-led">
+        <label for="node-output-led"><i class="fa fa-list"></i> LED</label>
+        <select type="text" id="node-input-led" size="1" onchange="Fun_Ctr700_LED_FollowUpTopicState()">
+            <option value="LED_RUN">RUN (green)</option>
+            <option value="LED_ERR">ERR (red)</option>
+        </select>
+    </div>
+
+    <div class="form-row"  id="id-node-div-row-input-initstate">
+        <label for="node-input-initstate"><i class="fa fa-check-square-o"></i> Init State</label>
+        <select type="text" id="node-input-initstate" size="1">
+            <option value="INIT_STATE_ACTIVE">Active</option>
+            <option value="INIT_STATE_INACTIVE">Inactive</option>
+        </select>
+    </div>
+
+    <hr size=1>
+
+    <div class="form-row">
+        <label for="node-input-actdata"><i class="fa fa-arrow-up"></i> Active</label>
+        <input type="text" id="node-input-actdata" style="width: 70%">
+        <input type="hidden" id="node-input-acttype">
+    </div>
+
+    <div class="form-row">
+        <label for="node-input-inactdata"><i class="fa fa-arrow-down"></i> Inactive</label>
+        <input type="text" id="node-input-inactdata" style="width: 70%">
+        <input type="hidden" id="node-input-inacttype">
+    </div>
+
+    <div class="form-row">
+        <label for="node-input-optalttopic"><i class="fa fa-envelope-o"></i></label>
+        <input type="checkbox" id="node-input-optalttopic" style="width: auto; vertical-align: top;" onclick="Fun_Ctr700_LED_FollowUpTopicState()">
+        <label style="width: 150px;"> Use alternative topic</label>
+    </div>
+
+    <div class="form-row">
+        <label for="node-input-alttopic"></label>
+        <input type="text" id="node-input-alttopic" disabled="disabled">
+    </div>
+
+    <div class="form-tips" id="id-node-div-row-form-tip">
+        <b>Note:</b> Default topic is <i>`/led_run`</i> resp. <i>`/led_err`</i>, <i>`#`</i> accepts all messages.
+    </div>
+
+    <hr size=1>
+
+    <div class="form-row">
+        <label for="node-input-name"><i class="fa fa-tag"></i> Name</label>
+        <input type="text" id="node-input-name" placeholder="Name">
+    </div>
+
+</script>
+
+
+<script language="javascript">
+
+    function Fun_Ctr700_LED_FollowUpTopicState()
+    {
+        // adopt enable/disable state for edit box "node-input-alttopic" depending on check state of "node-input-optalttopic"
+        // (this function is called during runtime in response to a check state change of the checkbox;
+        // startup initialization is done by event handler "oneditprepare" below)
+        var fCheckedState;
+        var strLed;
+
+        fCheckedState = document.getElementById("node-input-optalttopic").checked;
+        document.getElementById("node-input-alttopic").disabled = !fCheckedState;
+
+        if ( !fCheckedState )
+        {
+            strLed = document.getElementById("node-input-led").value;
+            if ((strLed != null) && (strLed.length > 0))
+            {
+                document.getElementById("node-input-alttopic").value = '/' + strLed.toLowerCase();
+            }
+        }
+    }
+
+ </script>
+
+
+
+<!-- ============================================================ -->
+<!--            N O D E   P R O P E R T I E S   S T R U C T       -->
+<!-- ============================================================ -->
+
+<script type="text/javascript">
+
+    RED.nodes.registerType('ctr700_led',{
+        category: 'sysworxx-function',
+        color:"DeepSkyBlue",
+        defaults: {
+            name:        {value:""},
+            led:         {value:"", required:true},
+            initstate:   {value:"INIT_STATE_INACTIVE"},
+            acttype:     {value:"num"},
+            actdata:     {value:"1"},
+            inacttype:   {value:"num"},
+            inactdata:   {value:"0"},
+            optalttopic: {value:false},
+            alttopic:    {value:""}
+        },
+        inputs:1,
+        outputs:0,
+        icon: "light.png",
+        align: "right",
+        label: function() {
+            return this.name||"ctr700_led";
+        },
+        labelStyle: function() {
+            return this.name?"node_label_italic":"";
+        },
+
+        oneditprepare: function() {
+            // This function is called during startup (dialog creation time) and handles initialization of gui elements
+            // at dialog creation time (after configuration values are restored by Node-RED runtime environment)
+            // console.log("oneditprepare");
+
+            // set startup initialization enable/disable state for edit box "node-input-alttopic" depending on
+            // check state of "node-input-optalttopic"
+            Fun_Ctr700_LED_FollowUpTopicState();
+
+            // TypedInput widget handler for edit box "node-input-acttype" / "node-input-actdata"
+            $('#node-input-actdata').typedInput({
+                default: "num",
+                typeField: $("#node-input-acttype"),
+                types: [
+                    {
+                        value:"bool",
+                        label:"boolean",
+                        icon:"red/images/typedInput/bool.png",
+                        options:["true","false"]
+                    },
+                    {
+                        value:"num",
+                        label:"number",
+                        icon:"red/images/typedInput/09.png",
+                        validate:/^[+-]?[0-9]*\.?[0-9]*([eE][-+]?[0-9]+)?$/
+                    },
+                    {
+                        value:"str",
+                        label:"string",
+                        icon:"red/images/typedInput/az.png"
+                    }
+                ]
+            });
+
+            // TypedInput widget handler for edit box "node-input-inacttype" / "node-input-inactdata"
+            $('#node-input-inactdata').typedInput({
+                default: "num",
+                typeField: $("#node-input-inacttype"),
+                types: [
+                    {
+                        value:"bool",
+                        label:"boolean",
+                        icon:"red/images/typedInput/bool.png",
+                        options:["false","true"]
+                    },
+                    {
+                        value:"num",
+                        label:"number",
+                        icon:"red/images/typedInput/09.png",
+                        validate:/^[+-]?[0-9]*\.?[0-9]*([eE][-+]?[0-9]+)?$/
+                    },
+                    {
+                        value:"str",
+                        label:"string",
+                        icon:"red/images/typedInput/az.png"
+                    }
+                ]
+            });
+
+        },
+
+        oneditsave: function() {
+            var fCheckedState;
+            var strAltTopic;
+            fCheckedState = document.getElementById("node-input-optalttopic").checked;
+            if ( fCheckedState )
+            {
+                strAltTopic = document.getElementById("node-input-alttopic").value;
+                // console.log("oneditsave -> strAltTopic=" + strAltTopic);
+                if (strAltTopic.length == 0)
+                {
+                    RED.notify(RED._("notification.warning", {message:"Alternative Topic is selected but not specified."}),"warning");
+                }
+            }
+            return;
+        }
+
+    });
+
+</script>
+
+
+
+
+

@@ -1,0 +1,244 @@
+<!--
+*****************************************************************************
+
+  (c) SYSTEC electronic GmbH, D-08468 Heinsdorfergrund, Am Windrad 2
+      www.systec-electronic.com
+
+  Project:      Node-RED Node 'ctr700 switch'
+  Description:  Node configuration
+
+  -------------------------------------------------------------------------
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+
+  -------------------------------------------------------------------------
+
+  Revision History:
+
+  2018/02/25 -rs:   V1.00 Initial version
+
+*****************************************************************************
+-->
+
+
+
+<!-- ============================================================ -->
+<!--            N O D E   H E L P   T E X T                       -->
+<!-- ============================================================ -->
+
+<script type="text/x-red" data-help-name="ctr700_switch">
+
+    <p>sysWORXX CTR-700 Run/Stop switch node. Generates a <code>msg.payload</code>
+    with the values defined by user. The type of the payload value can be configured
+    as boolean, number or string.</p>
+    <p><b>Run</b> specifies the <code>msg.payload</code> output value which is generated if the switch is moved to position <i>`Run`</i>.</p>
+    <p><b>Stop</b> specifies the <code>msg.payload</code> output value which is generated if the switch is moved to position <i>`Stop`</i>.</p>
+    <p><i><u>Examples</u> for <b>Run</b> and <b>Stop</b>:</i><br>
+    [boolean] true<br>
+    [number] 0<br>
+    [number] -200<br>
+    [string] 1<br>
+    [string] open<br></p>
+    <h3>Output</h3>
+    <dl class="message-properties">
+        <dt>topic <span class="property-type">string</span></dt>
+        <dd>The default topic is <i>`/switch`</i>.  However, this can be overwritten
+        by option <i>`use alternative topic`</i></dd>
+        <dt>payload <span class="property-type">boolean, number or string</span></dt>
+        <dd>The payload corresponds to the current switch state and contains the values
+        configured by user for <i>`Run`</i> resp. <i>`Stop`</i>.</dd>
+    </dl>
+
+</script>
+
+
+
+<!-- ============================================================ -->
+<!--            N O D E   C O N F I G   D I A L O G               -->
+<!-- ============================================================ -->
+
+<script type="text/x-red" data-template-name="ctr700_switch">
+
+    <div class="form-row">
+        <label for="node-input-actdata"><i class="fa fa-arrow-up"></i> Run</label>
+        <input type="text" id="node-input-actdata" style="width: 70%">
+        <input type="hidden" id="node-input-acttype">
+    </div>
+
+    <div class="form-row">
+        <label for="node-input-inactdata"><i class="fa fa-arrow-down"></i> Stop</label>
+        <input type="text" id="node-input-inactdata" style="width: 70%">
+        <input type="hidden" id="node-input-inacttype">
+    </div>
+
+    <div class="form-row">
+        <label for="node-input-optalttopic"><i class="fa fa-envelope-o"></i></label>
+        <input type="checkbox" id="node-input-optalttopic" style="width: auto; vertical-align: top;" onclick="Fun_Ctr700_Switch_FollowUpTopicState()">
+        <label style="width: 150px;"> Use alternative topic</label>
+    </div>
+
+    <div class="form-row">
+        <label for="node-input-alttopic"></label>
+        <input type="text" id="node-input-alttopic" disabled="disabled">
+    </div>
+
+    <div class="form-tips" id="id-node-div-row-form-tip">
+        <b>Note:</b> Default topic is <i>`/switch`</i>.
+    </div>
+
+    <hr size=1>
+
+    <div class="form-row">
+        <label for="node-input-name"><i class="fa fa-tag"></i> Name</label>
+        <input type="text" id="node-input-name" placeholder="Name">
+    </div>
+
+</script>
+
+
+<script language="javascript">
+
+    function Fun_Ctr700_Switch_FollowUpTopicState()
+    {
+        // adopt enable/disable state for edit box "node-input-alttopic" depending on check state of "node-input-optalttopic"
+        // (this function is called during runtime in response to a check state change of the checkbox;
+        // startup initialization is done by event handler "oneditprepare" below)
+        var fCheckedState;
+        var strChannel;
+
+        fCheckedState = document.getElementById("node-input-optalttopic").checked;
+        document.getElementById("node-input-alttopic").disabled = !fCheckedState;
+
+        if ( !fCheckedState )
+        {
+            document.getElementById("node-input-alttopic").value = "/switch";
+        }
+    }
+
+ </script>
+
+
+
+<!-- ============================================================ -->
+<!--            N O D E   P R O P E R T I E S   S T R U C T       -->
+<!-- ============================================================ -->
+
+<script type="text/javascript">
+
+    RED.nodes.registerType('ctr700_switch',{
+        category: 'sysworxx-function',
+        color:"DeepSkyBlue",
+        defaults: {
+            name:        {value:""},
+            acttype:     {value:"num"},
+            actdata:     {value:"1"},
+            inacttype:   {value:"num"},
+            inactdata:   {value:"0"},
+            optalttopic: {value:false},
+            alttopic:    {value:""}
+        },
+        inputs:0,
+        outputs:1,
+        icon: "switch.png",
+        label: function() {
+            return this.name||"ctr700_switch";
+        },
+        labelStyle: function() {
+            return this.name?"node_label_italic":"";
+        },
+
+        oneditprepare: function() {
+            // This function is called during startup (dialog creation time) and handles initialization of gui elements
+            // at dialog creation time (after configuration values are restored by Node-RED runtime environment)
+            // console.log("oneditprepare");
+
+            // set startup initialization enable/disable state for edit box "node-input-alttopic" depending on
+            // check state of "node-input-optalttopic"
+            Fun_Ctr700_Switch_FollowUpTopicState();
+
+            // TypedInput widget handler for edit box "node-input-acttype" / "node-input-actdata"
+            $('#node-input-actdata').typedInput({
+                default: "num",
+                typeField: $("#node-input-acttype"),
+                types: [
+                    {
+                        value:"bool",
+                        label:"boolean",
+                        icon:"red/images/typedInput/bool.png",
+                        options:["true","false"]
+                    },
+                    {
+                        value:"num",
+                        label:"number",
+                        icon:"red/images/typedInput/09.png",
+                        validate:/^[+-]?[0-9]*\.?[0-9]*([eE][-+]?[0-9]+)?$/
+                    },
+                    {
+                        value:"str",
+                        label:"string",
+                        icon:"red/images/typedInput/az.png"
+                    }
+                ]
+            });
+
+            // TypedInput widget handler for edit box "node-input-inacttype" / "node-input-inactdata"
+            $('#node-input-inactdata').typedInput({
+                default: "num",
+                typeField: $("#node-input-inacttype"),
+                types: [
+                    {
+                        value:"bool",
+                        label:"boolean",
+                        icon:"red/images/typedInput/bool.png",
+                        options:["false","true"]
+                    },
+                    {
+                        value:"num",
+                        label:"number",
+                        icon:"red/images/typedInput/09.png",
+                        validate:/^[+-]?[0-9]*\.?[0-9]*([eE][-+]?[0-9]+)?$/
+                    },
+                    {
+                        value:"str",
+                        label:"string",
+                        icon:"red/images/typedInput/az.png"
+                    }
+                ]
+            });
+
+        },
+
+        oneditsave: function() {
+            var fCheckedState;
+            var strAltTopic;
+            fCheckedState = document.getElementById("node-input-optalttopic").checked;
+            if ( fCheckedState )
+            {
+                strAltTopic = document.getElementById("node-input-alttopic").value;
+                // console.log("oneditsave -> strAltTopic=" + strAltTopic);
+                if (strAltTopic.length == 0)
+                {
+                    RED.notify(RED._("notification.warning", {message:"Alternative Topic is selected but not specified."}),"warning");
+                }
+            }
+            return;
+        }
+
+    });
+
+</script>
+
+
+
+
+

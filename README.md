@@ -21,11 +21,11 @@ Run the following command in your node-RED user directory (typically `~/.node-re
 
 ## Content
 
-ctr700_di:      node to handle digital inputs
-ctr700_do:      node to handle digital outputs
-ctr700_ai:      node to handle analog inputs
-ctr700_led:     node to handle run and error led of the module
-ctr700_switch:  node to handle run/stop switch of the module
+- *ctr700_di*:      node to handle digital inputs
+- *ctr700_do*:      node to handle digital outputs
+- *ctr700_ai*:      node to handle analog inputs
+- *ctr700_led*:     node to handle run and error led of the module
+- *ctr700_switch*:  node to handle run/stop switch of the module
 
 
 ## Node status

@@ -25,6 +25,7 @@
   Revision History:
 
   2018/02/25 -rs:   V1.00 Initial version
+  2019/03/20 -ad:   V1.01 Fix handling for initial value
 
 ****************************************************************************/
 
@@ -45,7 +46,6 @@ module.exports = function(RED)
     //  Import external modules
     //=======================================================================
 
-    const RedRuntimeEvents = require("/usr/lib/node_modules/node-red/red/runtime/events");
     const ctr700drv = require('./ctr700drv.js');
 
 
@@ -92,8 +92,11 @@ module.exports = function(RED)
         // register handler for event type 'close'
         ThisNode.on ('close', Ctr700_DI_NodeHandler_OnClose);
 
-        // register one-time handler for event type 'nodes-started'
-        RedRuntimeEvents.once ('nodes-started', Ctr700_DI_NodeHandler_OnNodesStarted);
+        // register one-time handler for sending the initial value
+        ThisNode.m_injectImmediate = setImmediate(function()
+        {
+            Ctr700_DI_NodeHandler_OnNodesStarted();
+        });
 
         // run handler for event type 'open'
         Ctr700_DI_NodeHandler_OnOpen (NodeConfig_p);
@@ -202,6 +205,12 @@ module.exports = function(RED)
         {
 
             TraceMsg ('{Ctr700_DI_Node} closing...');
+
+            // clear immediate timeout
+            if (ThisNode.m_injectImmediate)
+            {
+                clearImmediate(ThisNode.m_injectImmediate);
+            }
 
             // unregister callback handler to input channel
             TraceMsg ('{Ctr700_DI_Node} ObjCtr700Drv.unregisterInterrupt(' + ThisNode.m_iChannelNumber + ')');

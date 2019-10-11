@@ -1,8 +1,8 @@
 /****************************************************************************
 
-  (c) SYSTEC electronic GmbH, D-08468 Heinsdorfergrund, Am Windrad 2
+(c) SYSTEC electronic AG, D-08468 Heinsdorfergrund, Am Windrad 2
       www.systec-electronic.com
-
+:
   Project:      SYSTEC sysWORXX CTR-700
   Description:  JS bindings for board driver
 
